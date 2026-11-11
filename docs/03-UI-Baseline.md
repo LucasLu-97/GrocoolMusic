@@ -85,8 +85,25 @@ BitChord 为 GPL-3.0，本项目同为 GPL-3.0，允许合并但必须保留双�
    分发的替代字体（如 Inter / Roboto Flex）而非复制 SF Pro。
 5. **动效**：转场、封面视差、播放页展开动画未做。
 
-## 六、验证
+## 六、验证与真机截图对比
 
-- 本地 `:kugou:test`（23 个契约测试）与 `:app:assembleDebug` 全绿。
-- GitHub Actions `check` / `release` 全绿。
-- 真机覆盖安装并抓取改造前后截图对比，见 `docs/03-UI-Baseline.md` 附带的记录。
+| 项 | 结果 |
+| --- | --- |
+| 本地 | `:kugou:test`（23 个契约测试）、`:app:assembleDebug` 全绿 |
+| CI | `check` / `release` 均 success |
+| 发布 | `v0.4.0-build.8`（13,557,800 bytes，versionCode 8），证书前缀 `0535ad27813ce0ca` 与前五版一致 |
+| 真机 | `adb install -r` 覆盖安装 `Success`（7→8），`homeFeed ok`、无崩溃 |
+
+对比截图（同一台 Xiaomi 17、同一首页、只读采集）：
+
+| 改造前 `docs/screenshots/ui-0.3.0-md3.png` | 改造后 `docs/screenshots/ui-0.4.0-ios-baseline.png` |
+| --- | --- |
+| 描边 `AssistChip` | 填充式 squircle 胶囊 |
+| 纯白直角卡片 + 色块首字封面 | 半透明玻璃卡片 + **真实酷狗榜单封面**（Coil） |
+| 贴底全宽 `NavigationBar` | **悬浮分离式玻璃标签栏** + 选中态 squircle 胶囊 |
+| 默认 Roboto 字阶 | 34/30/22/20sp 负字距大标题 + iOS 系统灰标签 |
+| MD3 `OutlinedTextField` 搜索框 | 填充式 iOS 搜索栏（放大镜 + 红色胶囊按钮） |
+| 普通 `RoundedCornerShape` | **squircle 连续曲率圆角**（移植自 BitChord） |
+
+MD3 控件审计：`NavigationBar` / `OutlinedTextField` / `AssistChip` / `Button` /
+`Surface` 的**实际 import 已全部清零**（剩余关键词仅存在于说明性注释中）。

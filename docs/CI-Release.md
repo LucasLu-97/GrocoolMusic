@@ -67,6 +67,7 @@ C:\Users\Lucas.Lu\.workbuddy\secrets\
 | 0.2.0 | `v0.2.0-build.5` | 5 | 12859413 bytes（M1，含 Compose + Media3） |
 | 0.2.1 | `v0.2.1-build.6` | 6 | 12859413 bytes（MID 热修复） |
 | 0.3.0 | `v0.3.0-build.7` | 7 | 12924953 bytes（M2 内容层） |
+| 0.4.0 | `v0.4.0-build.8` | 8 | 13557800 bytes（iOS 视觉基线 + Coil） |
 
 - 每次发布都由同一个 `KEYSTORE_BASE64` 解码签名，CI 的 `apksigner verify` 均通过。
 - 下载 0.1.0 / 0.1.1 的 APK 并解析 **APK Signing Block**（v2，pair ID `0x7109871a`），提取到的 X.509 证书 DER 的 SHA-256 前缀**同为 `0535ad27813ce0ca`** → 确认是同一张签名证书。
