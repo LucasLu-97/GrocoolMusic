@@ -25,5 +25,8 @@ keystore.properties
 secrets/
 gradle/wrapper/gradle-wrapper.jar.bak
 
+# 工作区内部笔记：不进入公开仓库
+.workbuddy/
+
 # 运行期生成的凭据与缓存
 kugou/.cookies/
