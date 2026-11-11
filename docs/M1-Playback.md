@@ -63,9 +63,10 @@
 
 ## 发布状态
 
-- `v0.2.0-build.5`（pre-release，`GrocoolMusic-0.2.0-release.apk`，12.8 MB）：首个可搜歌播放版本；CI 编译 + 签名校验 + golden 测试全绿。
-- 与 0.1.0 / 0.1.1 使用同一张签名证书（`0535ad27813ce0ca...`），`versionCode=5`，可直接覆盖安装。
-- 真机验收尚未完成，需要**有线 ADB**：`adb devices` → `adb install -r GrocoolMusic-0.2.0-release.apk` → `adb logcat` 观察取流与播放器错误。
+- `v0.2.0-build.5`（pre-release，`GrocoolMusic-0.2.0-release.apk`，12.8 MB）：首个可搜歌播放版本；CI 编译 + 签名校验 + golden 测试全绿。**真机搜索无结果，根因见上节，已由 0.2.1 修复**。
+- `v0.2.1-build.6`（pre-release，12.8 MB）：修复设备 MID 为空导致的 `error_code=20006`，并让网关错误可见。请覆盖安装此版本重新验证。
+- 与 0.1.x / 0.2.0 使用同一张签名证书（`0535ad27813ce0ca...`），`versionCode` 递增，可直接覆盖安装。
+- 真机验收尚未完成，需要**有线 ADB**：`adb devices` → `adb install -r GrocoolMusic-0.2.1-release.apk` → `adb logcat -d -s GrocoolMusic` 观察搜索与取流状态。
 
 ## 已知限制（有意为之）
 
