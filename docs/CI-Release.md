@@ -54,7 +54,9 @@ C:\Users\Lucas.Lu\.workbuddy\secrets\
 3. release 签名证书一致：所有版本都用同一个 keystore 与 alias。
 4. 产物为非 debuggable 的 release 包。
 
-调试包建议另用 flavor / `applicationIdSuffix`，避免覆盖正式包（M1 导入 BitChord 时沿用其 `dev` / `prod` flavor 思路）。
+调试包已用 `applicationIdSuffix = ".debug"` 与正式包**并存**（`dev.grocool.music.debug`），
+避免本地调试包覆盖统一签名的正式包。注意小米真机对 USB 安装会弹「允许安装」确认
+（`INSTALL_FAILED_USER_RESTRICTED`），需手机侧点一次；日常发版仍走 release 覆盖安装。
 
 ## 覆盖安装实证（2026-11-11）
 
@@ -63,8 +65,10 @@ C:\Users\Lucas.Lu\.workbuddy\secrets\
 | 0.1.0 | `v0.1.0-build.3` | 3 | 817593 bytes |
 | 0.1.1 | `v0.1.1-build.4` | 4 | 818405 bytes |
 | 0.2.0 | `v0.2.0-build.5` | 5 | 12859413 bytes（M1，含 Compose + Media3） |
+| 0.2.1 | `v0.2.1-build.6` | 6 | 12859413 bytes（MID 热修复） |
+| 0.3.0 | `v0.3.0-build.7` | 7 | 12924953 bytes（M2 内容层） |
 
-- 三次发布都由同一个 `KEYSTORE_BASE64` 解码签名，CI 的 `apksigner verify` 均通过。
+- 每次发布都由同一个 `KEYSTORE_BASE64` 解码签名，CI 的 `apksigner verify` 均通过。
 - 下载 0.1.0 / 0.1.1 的 APK 并解析 **APK Signing Block**（v2，pair ID `0x7109871a`），提取到的 X.509 证书 DER 的 SHA-256 前缀**同为 `0535ad27813ce0ca`** → 确认是同一张签名证书。
 - 0.2.0 的发布日志给出了官方指纹：`apksigner --print-certs` 输出
   `V2 Signer: certificate DN: CN=Grocool Music Release, O=GrocoolMusic, C=CN`，
@@ -100,7 +104,7 @@ C:\Users\Lucas.Lu\.workbuddy\secrets\
 
 ```bash
 python tools/download_release.py                       # 最新 release
-python tools/download_release.py --tag v0.2.1-build.6
+python tools/download_release.py --tag v0.3.0-build.7
 python tools/download_release.py --out /path/app.apk --probe-seconds 10
 ```
 

@@ -131,6 +131,16 @@ release 包**并存**，避免调试包覆盖正式包、也不破坏覆盖安�
 > 小米真机对 USB 安装会弹「允许安装」确认（`INSTALL_FAILED_USER_RESTRICTED`），
 > 需手机侧点一次；日常发版仍以统一签名的 release 覆盖安装为主。
 
+## 六之二、发布与真机状态（2026-11-11）
+
+- `v0.3.0-build.7`（pre-release，`GrocoolMusic-0.3.0-release.apk`，12,924,953 bytes，
+  sha256 `e79e9c43…`）：M2 内容层第一个测试版，CI `check` 与 `release` 均 success。
+- 解析 APK Signing Block（v2）得到证书 DER SHA-256 前缀 `0535ad27813ce0ca`，
+  与 0.1.0 / 0.1.1 / 0.2.0 / 0.2.1 完全一致 → 同签名，versionCode 3→4→5→6→7 递增。
+- `adb install -r` 覆盖安装 `Success`，`dumpsys package` 显示 `versionCode=7 / versionName=0.3.0`。
+  至此覆盖安装链路已在真机上连续验证两轮。
+- 真机首页：热搜词、榜单卡片、四标签全部渲染，`homeFeed ok` 无异常。
+
 ## 七、完成标志与后续
 
 - [x] POST body 签名解锁并实测
@@ -138,6 +148,8 @@ release 包**并存**，避免调试包覆盖正式包、也不破坏覆盖安�
 - [x] 领域模型 + Repository + adapter 隔离带落地
 - [x] 4 标签 UI + 榜单详情 + 首页内容装配
 - [x] 23 个契约测试、Kotlin 真实网关探针、本地 Android 编译
-- [ ] 真机 UI 验收（等 0.3.0 release 覆盖安装）
+- [x] 真机 UI 验收：`v0.3.0-build.7` 覆盖安装（versionCode 6→7，同签名），首页渲染
+  「已加载 3 个内容板块」+ 12 个真实热搜词 + TOP500/内地榜卡片 + 四标签导航，
+  日志 `GrocoolMusic: homeFeed ok`，无崩溃（纯只读采集，未点击屏幕）
 - [ ] M2 后段：歌单广场 / 每日推荐 / 歌手与专辑详情 / 评论 / 封面加载 / 分页
 - [ ] M3/M4：登录态、概念版免费听 Auth、人机验证流程、云盘
