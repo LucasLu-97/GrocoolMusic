@@ -69,6 +69,13 @@ C:\Users\Lucas.Lu\.workbuddy\secrets\
 - 当前环境的 git 协议走代理被拦（CONNECT 502），远程提交通过 GitHub Git Data API
   推送；用户本机正常网络下可直接 `git push`。
 
+## 已知坑
+
+- **不要用 `android-actions/setup-android@v3`**：在 ubuntu-24.04 runner 上，它判定预装 cmdline-tools 版本「不对」而重新下载，随后在 `sdkmanager --licenses` 的 `(y/N)?` 交互提示处无人应答、直接 exit 1。两条工作流都改为使用 runner 预装 SDK
+  （`/usr/local/lib/android/sdk`），显式 `yes | sdkmanager --licenses` 并按需安装 platform 35 / build-tools 35.0.0。
+- **空仓库不能直接建 blob**：Git Data API 对空仓库返回 409 `Git Repository is empty`，需先用 contents API 写入一个种子文件初始化默认分支。
+- `kugou` 的网络实现必须用 `HttpURLConnection`，不能用 `java.net.http.HttpClient` —— 后者在 Android 运行时不存在。
+
 ## M0 骨架 APK 的定位
 
 `app/` 目前是**最小验证壳**：一个 `Activity` + `kugou` 协议层的签名自检显示，

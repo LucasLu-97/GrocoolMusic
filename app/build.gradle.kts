@@ -4,8 +4,8 @@ val releaseKeystore: String? = System.getenv("RELEASE_KEYSTORE")
     ?.takeIf { it.isNotBlank() && file(it).isFile }
 
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
