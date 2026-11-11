@@ -2,7 +2,7 @@
 
 一个第三方在线音乐软件：**界面深度模仿 Apple Music，内容与功能完全移植酷狗音乐概念版**（功能等价，非逐项照搬）。
 
-> 当前状态：**M0 协议验证阶段**。仓库包含需求基线、实施规格、上游版本锁定，以及独立的 Kotlin/JVM 协议层 `kugou/`。安卓主应用尚未开始，界面与播放层将在 M1 引入。
+> 当前状态：**M0 协议验证阶段**。仓库包含需求基线、实施规格、上游版本锁定、独立的 Kotlin/JVM 协议层 `kugou/`，以及一个用于验证云端构建 / 签名 / 发布链路的最小安卓骨架 `app/`。完整的 Apple Music 风格界面与播放层将在 M1 引入。
 
 ## 项目文档
 
@@ -12,6 +12,7 @@
 | `docs/02-Implementation-Plan.md` | 实施规格与任务分解：架构契约、功能对照、里程碑、WP-0~WP-8 工作包 |
 | `docs/UPSTREAM.md` | 三个上游仓库的锁定版本与同步规则 |
 | `docs/M0-Protocol-Spec.md` | 酷狗请求签名层协议规格（M0 实现依据） |
+| `docs/CI-Release.md` | 云端构建、统一签名与测试版发布流程 |
 
 ## 架构
 
@@ -21,15 +22,22 @@ KugouApi（协议 / 签名） → KugouRepository（领域模型） → adapter/
 
 `kugou/` 是**独立 Kotlin/JVM 模块**，不依赖 Android SDK，可单独编译与测试；它对应 KuGouMusicApi 的 `util/request.js` + `util/crypto.js`，是后续所有 236 个接口的公共底座。
 
-## 构建
+## 构建与发布（全云端）
 
-需要 JDK 17+ 与 Gradle 8.x（或使用 CI）：
+**本机不需要安装 JDK / Gradle / Android SDK / Android Studio** —— 编译、签名、打包、发布全部由 GitHub Actions 完成。
+
+| 工作流 | 触发 | 产物 |
+| --- | --- | --- |
+| `check.yml` | push / PR / 手动 | `kugou` 编译 + 签名 golden 测试 + `app` debug 包 |
+| `release.yml` | Actions 手动运行或 `v*` tag | 已签名 APK + **测试版 pre-release** |
+
+发测试版：仓库 **Actions → release → Run workflow**，填版本号即可。统一签名密钥存于仓库 Actions Secrets，私钥本体不在仓库内，后续版本可直接覆盖安装。完整说明见 `docs/CI-Release.md`。
+
+若仍想本地编译，需要 JDK 17 + Gradle 8.10.2 + Android SDK 35：
 
 ```bash
-gradle :kugou:test          # 运行签名算法 golden 测试与请求构造测试
+gradle :kugou:test :app:assembleDebug
 ```
-
-本机尚无 JDK / Android SDK 时，可直接查看 `.github/workflows/check.yml` 的 CI 结果。安卓主应用（`app/`）将在 M1 引入，届时补充 Gradle Wrapper 与签名配置。
 
 ## 上游与致谢
 

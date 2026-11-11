@@ -28,8 +28,14 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Compile kugou module
-        run: gradle :kugou:compileKotlin --no-daemon --stacktrace
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Ensure Android platform 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" > /dev/null
+
+      - name: Compile protocol layer and Android skeleton
+        run: gradle :kugou:compileKotlin :app:assembleDebug --no-daemon --stacktrace
 
       - name: Run signature golden tests
         run: gradle :kugou:test --no-daemon --stacktrace

@@ -1,33 +1,37 @@
 package dev.grocool.kugou
 
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
+import java.net.HttpURLConnection
+import java.net.URL
 
 /** 网络出口抽象，便于契约测试注入假实现，也便于后续替换成 Ktor / OkHttp。 */
 interface HttpTransport {
     fun execute(request: BuiltRequest): String
 }
 
-/** JDK 内置实现，零第三方网络依赖。 */
-class JdkHttpTransport(
-    private val client: HttpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(15))
-        .followRedirects(HttpClient.Redirect.NORMAL)
-        .build(),
+/**
+ * 基于 HttpURLConnection 的默认实现：JVM 与 Android 运行时都支持，
+ * 零第三方依赖。刻意不用 java.net.http.HttpClient —— 它在 Android 上不可用。
+ */
+class DefaultHttpTransport(
+    private val connectTimeoutMs: Int = 15_000,
+    private val readTimeoutMs: Int = 20_000,
 ) : HttpTransport {
     override fun execute(request: BuiltRequest): String {
-        val builder = HttpRequest.newBuilder(URI(request.url))
-            .timeout(Duration.ofSeconds(20))
-        request.headers.forEach { (k, v) -> builder.header(k, v) }
-        when (request.method.uppercase()) {
-            "POST" -> builder.POST(HttpRequest.BodyPublishers.noBody())
-            else -> builder.GET()
+        val connection = URL(request.url).openConnection() as HttpURLConnection
+        connection.requestMethod = request.method.uppercase()
+        connection.connectTimeout = connectTimeoutMs
+        connection.readTimeout = readTimeoutMs
+        request.headers.forEach { (k, v) -> connection.setRequestProperty(k, v) }
+        try {
+            val stream = if (connection.responseCode in 200..299) {
+                connection.inputStream
+            } else {
+                connection.errorStream
+            }
+            return stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+        } finally {
+            connection.disconnect()
         }
-        val response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString(Charsets.UTF_8))
-        return response.body()
     }
 }
 
@@ -41,7 +45,7 @@ class JdkHttpTransport(
 class KugouApi(
     private val platform: Platform = Platform.LITE,
     private val credentials: KugouCredentials = KugouCredentials(),
-    private val transport: HttpTransport = JdkHttpTransport(),
+    private val transport: HttpTransport = DefaultHttpTransport(),
     private val clock: () -> Long = { System.currentTimeMillis() / 1000 },
 ) {
     private val builder = KugouRequestBuilder(platform, credentials, clock)

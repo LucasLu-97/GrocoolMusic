@@ -1,5 +1,6 @@
 [versions]
 kotlin = "2.0.21"
+agp = "8.6.1"
 serialization = "1.7.3"
 junit = "5.10.2"
 junit-platform = "1.10.2"
@@ -11,3 +12,5 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+android-application = { id = "com.android.application", version.ref = "agp" }
