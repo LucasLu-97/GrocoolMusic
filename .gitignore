@@ -1,5 +1,6 @@
 # 构建产物
 .gradle/
+.kotlin/
 build/
 **/build/
 .cxx/

@@ -4,7 +4,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /** 网络出口抽象，便于契约测试注入假实现，也便于后续替换成 Ktor / OkHttp。 */
-interface HttpTransport {
+fun interface HttpTransport {
     fun execute(request: BuiltRequest): String
 }
 
@@ -23,6 +23,10 @@ class DefaultHttpTransport(
         connection.readTimeout = readTimeoutMs
         request.headers.forEach { (k, v) -> connection.setRequestProperty(k, v) }
         try {
+            if (request.body.isNotEmpty()) {
+                connection.doOutput = true
+                connection.outputStream.use { it.write(request.body.toByteArray(Charsets.UTF_8)) }
+            }
             val stream = if (connection.responseCode in 200..299) {
                 connection.inputStream
             } else {
@@ -49,10 +53,11 @@ class DefaultHttpTransport(
 class KugouApi(
     private val platform: Platform = Platform.LITE,
     private val credentials: KugouCredentials = KugouCredentials(),
-    private val transport: HttpTransport = DefaultHttpTransport(),
+    internal val transport: HttpTransport = DefaultHttpTransport(),
     private val clock: () -> Long = { System.currentTimeMillis() / 1000 },
 ) {
-    private val builder = KugouRequestBuilder(platform, credentials, clock)
+    internal val builder = KugouRequestBuilder(platform, credentials, clock)
+    internal val currentPlatform: Platform get() = platform
 
     /**
      * `module/search.js` — 概念版搜索会把 clientver 覆盖为 201。

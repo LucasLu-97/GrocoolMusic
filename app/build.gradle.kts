@@ -34,6 +34,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // 本地 debug 包与统一签名的 release 包并存，避免调试包覆盖正式包。
+            // 也让本机构建的 APK 能随时装到真机验证，不影响覆盖安装链路。
+            applicationIdSuffix = ".debug"
+            // 与 CI release 的 versionCode 区分，避免 ADB 安装时误判降级。
+            versionNameSuffix = "-debug"
+        }
         release {
             // M1 阶段仍不开混淆，避免干扰签名与产物排查。
             isMinifyEnabled = false

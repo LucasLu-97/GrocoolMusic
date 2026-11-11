@@ -2,7 +2,7 @@
 
 一个第三方在线音乐软件：**界面深度模仿 Apple Music，内容与功能完全移植酷狗音乐概念版**（功能等价，非逐项照搬）。
 
-> 当前状态：**M1 已完成并真机验收通过**（M0 真实网关验签 / 搜索 / 取流；M1 在 Xiaomi 17 上实测「搜歌 → 取流 → Media3 出声」全链路，`AudioTrack` 有非零振幅输出）。`app/` 是 Compose 的 Apple Music 风格起点并接入 Media3，`kugou/` 协议层可直接搜歌取流；云端构建 / 统一签名 / 测试版发布链路已验证可用，四个测试版均同签名可覆盖安装。下一步是 M1 后段（按 tag 导入 BitChord `v1.9.1` UI 基线并裁剪国际服务）与 M2 内容层。
+> 当前状态：**M2 内容层第一批已完成**（M0 真实网关验签 / 搜索 / 取流；M1 在 Xiaomi 17 真机实测「搜歌 → 取流 → Media3 出声」全链路；M2 解锁 POST body 签名、建立领域模型 / Repository / adapter 隔离带，落地榜单 56 个、热搜 9 组、榜单歌曲播放与四标签 UI）。云端构建 / 统一签名 / 测试版发布链路已验证可用，历次测试版均同签名可覆盖安装。本机另已装好 JDK / Gradle / Android SDK，可本地即时编译。下一步是 M2 后段（歌单 / 推荐 / 歌手 / 评论）与 M3/M4（登录态、免费听 Auth、人机验证）。
 
 ## 项目文档
 
@@ -13,8 +13,9 @@
 | `docs/UPSTREAM.md` | 三个上游仓库的锁定版本与同步规则 |
 | `docs/M0-Protocol-Spec.md` | 酷狗请求签名层协议规格（M0 实现依据，含真实网关实测要点） |
 | `docs/M0-Smoke-Test.md` | M0 真实接口冒烟测试结果矩阵与定案结论 |
-| `docs/M1-Playback.md` | M1 播放闭环、明文流量约束与 Apple Music 风格基线 |
-| `docs/CI-Release.md` | 云端构建、统一签名与测试版发布流程 |
+| `docs/M1-Playback.md` | M1 播放闭环、真机验收证据、ADB 工具分工 |
+| `docs/M2-Content.md` | M2 内容层：POST body 签名规则、领域模型、Repository、多屏幕 UI、本地编译环境 |
+| `docs/CI-Release.md` | 云端构建、统一签名、测试版发布流程与已知坑 |
 
 ## 架构
 
@@ -36,11 +37,19 @@ KugouApi（协议 / 签名） → KugouRepository（领域模型） → adapter/
 
 发测试版：仓库 **Actions → release → Run workflow**，填版本号即可。统一签名密钥存于仓库 Actions Secrets，私钥本体不在仓库内，后续版本可直接覆盖安装。完整说明见 `docs/CI-Release.md`。
 
-若仍想本地编译，需要 JDK 17 + Gradle 8.10.2 + Android SDK 35：
+**本地即时编译（可选，2026-11-11 已装好）**：JDK 17 / Gradle 8.10.2 / Android SDK 35 位于
+`C:\Users\Lucas.Lu\.workbuddy\tools\`（仓库之外）。国内 Maven 走
+`C:\Users\Lucas.Lu\.workbuddy\tools\gradle-init\aliyun-mirrors.init.gradle` 通过 `-I` 显式传入，**不改仓库配置、不影响 CI**：
 
 ```bash
-gradle :kugou:test :app:assembleDebug
+export JAVA_HOME="C:/Users/Lucas.Lu/.workbuddy/tools/jdk-17"
+export ANDROID_HOME="C:/Users/Lucas.Lu/.workbuddy/tools/android-sdk"
+gradle -I "C:/Users/Lucas.Lu/.workbuddy/tools/gradle-init/aliyun-mirrors.init.gradle" \
+  :kugou:test :app:assembleDebug
 ```
+
+实测 23 个契约测试约 21 秒、Android debug 编译约 25 秒。真实网关探针：
+`gradle :kugou:gatewayProbe`（仅国内网络，不参与 CI）。详见 `docs/M2-Content.md`。
 
 ## 上游与致谢
 

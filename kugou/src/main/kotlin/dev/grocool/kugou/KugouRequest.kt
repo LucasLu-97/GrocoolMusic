@@ -35,6 +35,15 @@ data class RequestOptions(
     val skipSignature: Boolean = false,
     val clearDefaultParams: Boolean = false,
     val clientIp: String = "",
+    /**
+     * POST 请求体（已序列化的 JSON 字符串）。
+     *
+     * 2026-11-11 真实网关实测确认：酷狗的 POST 接口把 **JSON.stringify(body)**
+     * 拼进签名串（`salt + 排序参数串 + body + salt`）。不带 body 参与签名会返回
+     * `status=0 / error_code=20006`；GET 的 body 为空串，不受影响。
+     * 依据：`util/request.js:139` 与 `util/helper.js:61`；见 `docs/M2-Content.md`。
+     */
+    val body: String = "",
 )
 
 /** 构造完成的请求，交给 [HttpTransport] 发送。 */
@@ -43,6 +52,8 @@ data class BuiltRequest(
     val url: String,
     val headers: Map<String, String>,
     val params: Map<String, String>,
+    /** POST/PUT 请求体；GET 为空串。 */
+    val body: String = "",
 )
 
 /**
@@ -89,8 +100,9 @@ class KugouRequestBuilder(
             )
         }
 
-        // M0 的请求均为 GET，body 为空串；POST 接口在 M2 之后接入时需把序列化后的 body 传入。
-        val body = ""
+        // POST 的 JSON body 必须参与签名；GET 为空串。
+        // 上游：const data = typeof options.data === 'object' ? JSON.stringify(options.data) : ''
+        val body = options.body
         if (!merged.containsKey("signature") && !options.skipSignature) {
             merged["signature"] = when (options.encryptType) {
                 EncryptType.ANDROID -> KugouCrypto.signatureAndroid(merged, platform, body)
@@ -108,6 +120,7 @@ class KugouRequestBuilder(
             put("kg-thash", "5d816a0")
             put("kg-rec", "1")
             put("kg-rf", "B9EDA08A64250DEFFBCADDEE00F8F25F")
+            if (body.isNotEmpty()) put("Content-Type", "application/json")
             if (options.clientIp.isNotEmpty()) {
                 put("X-Real-IP", options.clientIp)
                 put("X-Forwarded-For", options.clientIp)
@@ -125,6 +138,7 @@ class KugouRequestBuilder(
             url = url,
             headers = headers,
             params = merged.mapValues { (_, v) -> v.toString() },
+            body = body,
         )
     }
 
