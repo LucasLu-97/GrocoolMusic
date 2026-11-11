@@ -92,6 +92,31 @@ C:\Users\Lucas.Lu\.workbuddy\secrets\
 - 当前环境的 git 协议走代理被拦（CONNECT 502），远程提交通过 GitHub Git Data API
   推送；用户本机正常网络下可直接 `git push`。
 
+## Release 资产下载加速
+
+本机代理下 GitHub release 直链返回 `CONNECT tunnel 502`，而 `api.github.com`
+的 asset 端点实测只有约 27 KB/s（12.8 MB 要下 8 分钟）。为此提供
+`tools/download_release.py`：**并发测速 10 个镜像 → 选最快 → 复用探测时已下完的文件 → 校验 APK**。
+
+```bash
+python tools/download_release.py                       # 最新 release
+python tools/download_release.py --tag v0.2.1-build.6
+python tools/download_release.py --out /path/app.apk --probe-seconds 10
+```
+
+2026-11-11 实测（6~10 秒探测窗口）：
+
+| 线路 | 速度 | 结果 |
+| --- | --- | --- |
+| **`gh-proxy.com`** | **约 1.2~2.1 MB/s** | 探测窗口内即完整下载 12.8 MB，最优 |
+| `ghfast.top` | 约 170~310 KB/s | 可用，次选 |
+| `ghproxy.net` | 约 7~35 KB/s | 可用但慢 |
+| 其余 7 条 / 直链 | 0 或返回非 APK | 不可用 |
+
+脚本会校验文件大小、zip 头、`AndroidManifest.xml` 与 dex，并输出 sha256；
+某条线路不完整时自动尝试下一条。默认输出到
+`C:\Users\Lucas.Lu\.workbuddy\tmp\<asset-name>`（仓库外）。
+
 ## 已知坑
 
 - **不要用 `android-actions/setup-android@v3`**：在 ubuntu-24.04 runner 上，它判定预装 cmdline-tools 版本「不对」而重新下载，随后在 `sdkmanager --licenses` 的 `(y/N)?` 交互提示处无人应答、直接 exit 1。两条工作流都改为使用 runner 预装 SDK

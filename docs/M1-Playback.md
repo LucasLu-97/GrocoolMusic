@@ -61,6 +61,35 @@
 > 排查命令（有线 ADB）：`adb logcat -d -s GrocoolMusic`；
 > 界面上也会直接显示 `酷狗返回 status=..., error_code=...`。
 
+## ADB 自动化验证
+
+`tools/adb_verify.py` 把真机验证做成一条命令：等待设备上线 → `adb install -r`
+覆盖安装 → 启动 App → 用 `uiautomator dump` 找到「搜索」按钮并点击 → 点击第一首
+「免费」曲目 → 抓 `adb logcat -d -s GrocoolMusic` → 输出结论（可写 JSON 结果文件）。
+
+```bash
+python tools/adb_verify.py --apk C:/path/GrocoolMusic-0.2.1-release.apk --wait 600 \
+  --result-file C:/tmp/adb_verify_result.json
+```
+
+本机 adb 可执行文件：`D:\VibeCodingSpace\tools\platform-tools\adb.exe`（v37.0.1）。
+
+**2026-11-11 环境诊断**：`adb devices` 持续为空。WinUSB 驱动本身正常
+（`DEVPKEY_Device_Service=WINUSB`、`HasProblem=False`），但
+`DEVPKEY_Device_IsPresent=False`，且 `Get-PnpDevice -PresentOnly` 过滤后没有任何
+Xiaomi / Android 设备 —— 系统里那些 `USB\VID_18D1&PID_4E11` 记录是**历史条目，
+手机当前并未以数据/ADB 模式在线**。网络 ADB（`10.42.0.1:5555`）与 mDNS 也均无响应。
+
+因此在手机侧完成一次以下操作后，上面的脚本会自动接管，无需再手动装包/点按：
+
+1. 换一条**支持数据传输**的 USB 线（充电线不行），或换一个 USB 口；
+2. 下拉通知栏把 USB 用途从「仅充电」改为「传输文件 (MTP)」；
+3. 确认「允许 USB 调试？」弹窗点「允许」（可勾选「一律允许」）；若仍无设备，
+   在开发者选项里「撤销 USB 调试授权」后重新插拔。
+
+备选：若手机开启的是 Android 11+ **无线调试**，把开发者选项里显示的
+`IP:端口` 给我，用 `adb connect <IP>:<端口>` 即可全自动，不依赖 USB 驱动状态。
+
 ## 发布状态
 
 - `v0.2.0-build.5`（pre-release，`GrocoolMusic-0.2.0-release.apk`，12.8 MB）：首个可搜歌播放版本；CI 编译 + 签名校验 + golden 测试全绿。**真机搜索无结果，根因见上节，已由 0.2.1 修复**。
