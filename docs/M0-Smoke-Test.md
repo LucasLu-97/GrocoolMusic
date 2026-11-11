@@ -1,0 +1,54 @@
+# M0 真实接口冒烟测试
+
+> 日期：2026-11-11 　工具：`tools/smoke_test.py`（Python 标准库独立实现，零依赖）
+> 目的：验证 `kugou/` 协议层的签名与请求构造是否被**真实酷狗网关**接受，而不是只通过本地 golden 自测。
+> 脚本刻意与 Kotlin 实现分离编写，避免「自己验自己」。
+
+## 结论
+
+**M0 协议层验收通过**：概念版 lite 与标准版 standard 双平台验签成功；搜索返回真实数据；取流拿到真实可播放 CDN URL。
+
+```bash
+python tools/smoke_test.py --keyword 儿歌          # PASS，返回可播放 URL
+python tools/smoke_test.py --keyword 周杰伦 --skip-signature   # 预期 FAIL：err signature
+```
+
+## 实测结果矩阵
+
+| 用例 | 结果 |
+| --- | --- |
+| lite 搜索「周杰伦」 | HTTP 200，`status=1`，`error_code=0`，`total=480`，返回 30 条真实歌曲 |
+| **去掉 signature** | `status=0`，`error_code=20006`，`err signature` → **签名必需** |
+| standard 搜索「周杰伦」 | HTTP 200，`status=1`，`total=480` → 标准版 appid / clientver / 盐值同样有效 |
+| `privilegefilter=1` 搜索 | 返回 30 条，全部 `Privilege=0` → 可用于筛选免费曲目 |
+| `/v5/url` 免 VIP 曲目（儿歌，`Privilege=8`） | `status=1`，`url` 数组（CDN `fs.youthandroid2.kugou.com`）、`bitRate=128000`、`backupUrl`、`timeLength` |
+| `/v5/url` VIP 曲目（`Privilege=10`） | `status=2`，`fail_process=["pkg","buy"]`，`hash_offset` 试听区段，无 `url` |
+| `/v5/url` VIP 曲目 + `IsFreePart=1` | `status=1`，返回试听片段 URL |
+| `ssa-code` 风控头 | 本次请求量小，未触发 |
+
+## 定案与发现
+
+1. **`notSign` 歧义已定案**：`module/song_url.js` 传 `notSign: true`，但 `util/request.js` 读的是 `notSignature`；实测证明**不签名会被网关拒绝（20006）**，因此本项目 `KugouRequestBuilder.skipSignature` 默认 `false`（始终签名）是正确的，不要按上游字面改成跳过。
+2. **lite 分支参数全部正确**：搜索 `clientver=201`、取流 `page_id=967177915` / `pid=411` / `ppage_id=356753938,...`，返回的 CDN 是概念版域名 `fs.youthandroid2.kugou.com`，说明平台切换生效。
+3. **`status=2` 不是协议错误**，是版权 / VIP 限制。完整播放 VIP 曲目需要登录 token 与概念版「免费听」Auth 链路（`song_auth` → `song_url_auth`），这是 M3/M4 的核心工作，也是 EchoMusic 实践者已经跑通的部分。
+4. `encryptKey`（signKey）在取流接口上正常工作；未触发人机验证，但真实 App 高频请求时仍需按 `KugouVerificationFlow.vue` 实现可恢复流程。
+5. 两套平台 token 不通用这一约束仍未验证（本次均为未登录请求），M3 登录时必须实测。
+
+## `/v5/url` 响应结构要点
+
+| 情形 | 字段 |
+| --- | --- |
+| 成功 | `status=1`、`url: string[]`、`backupUrl: string[]`、`bitRate`、`timeLength`、`extName`、`q`、`fileHead`、`trans_param` |
+| 受限 | `status=2`、`priv_status`、`fail_process: ["pkg","buy"]`、`hash_offset`（试听区段 `start_ms`/`end_ms`）、`auth_through` |
+
+## M0 完成标志核对
+
+| 标志 | 状态 |
+| --- | --- |
+| Kotlin 公共签名层 + 三个接口 | ✅ 已实现，golden 测试与 CI 通过 |
+| 国内网络下取到可播放 URL | ✅ 真实网关返回 CDN URL |
+| 用 Media3 实际播放出声 | ⬜ 待真机 + 有线 ADB（M1） |
+| 登录态 / 免费听 Auth | ⬜ M3 / M4 |
+| 统一签名 APK 发布 | ✅ `v0.1.0-build.3` pre-release |
+
+> 本测试仅用于验证协议正确性，不存储、不传播任何音频文件；返回的 URL 未写入仓库。

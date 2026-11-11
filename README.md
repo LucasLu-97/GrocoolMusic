@@ -2,7 +2,7 @@
 
 一个第三方在线音乐软件：**界面深度模仿 Apple Music，内容与功能完全移植酷狗音乐概念版**（功能等价，非逐项照搬）。
 
-> 当前状态：**M0 协议验证阶段**。仓库包含需求基线、实施规格、上游版本锁定、独立的 Kotlin/JVM 协议层 `kugou/`，以及一个用于验证云端构建 / 签名 / 发布链路的最小安卓骨架 `app/`。完整的 Apple Music 风格界面与播放层将在 M1 引入。
+> 当前状态：**M0 已完成** —— 真实酷狗网关验签、搜索与取流均跑通（见 `docs/M0-Smoke-Test.md`）。仓库包含需求基线、实施规格、协议规格与实测记录、独立的 Kotlin/JVM 协议层 `kugou/`、云端构建 / 签名 / 发布链路，以及一个最小安卓骨架 `app/`。完整的 Apple Music 风格界面与 Media3 播放层将在 M1 引入。
 
 ## 项目文档
 
@@ -11,7 +11,8 @@
 | `docs/01-Project-Brief.md` | 修订后的项目需求说明（可独立转发给其他 AI / agent 阅读） |
 | `docs/02-Implementation-Plan.md` | 实施规格与任务分解：架构契约、功能对照、里程碑、WP-0~WP-8 工作包 |
 | `docs/UPSTREAM.md` | 三个上游仓库的锁定版本与同步规则 |
-| `docs/M0-Protocol-Spec.md` | 酷狗请求签名层协议规格（M0 实现依据） |
+| `docs/M0-Protocol-Spec.md` | 酷狗请求签名层协议规格（M0 实现依据，含真实网关实测要点） |
+| `docs/M0-Smoke-Test.md` | M0 真实接口冒烟测试结果矩阵与定案结论 |
 | `docs/CI-Release.md` | 云端构建、统一签名与测试版发布流程 |
 
 ## 架构
@@ -30,6 +31,7 @@ KugouApi（协议 / 签名） → KugouRepository（领域模型） → adapter/
 | --- | --- | --- |
 | `check.yml` | push / PR / 手动 | `kugou` 编译 + 签名 golden 测试 + `app` debug 包 |
 | `release.yml` | Actions 手动运行或 `v*` tag | 已签名 APK + **测试版 pre-release** |
+| `smoke.yml` | Actions 手动运行（诊断） | 真实酷狗网关验签 / 取流冒烟测试 |
 
 发测试版：仓库 **Actions → release → Run workflow**，填版本号即可。统一签名密钥存于仓库 Actions Secrets，私钥本体不在仓库内，后续版本可直接覆盖安装。完整说明见 `docs/CI-Release.md`。
 

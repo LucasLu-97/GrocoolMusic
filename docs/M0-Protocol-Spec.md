@@ -74,9 +74,19 @@ kg-rf    : B9EDA08A64250DEFFBCADDEE00F8F25F
 
 ## 8. 已知不一致与待验证项（重要）
 
-1. `module/song_url.js` 传 `notSign: true`，但 `util/request.js` 读取的是 `options.notSignature`。若 `app.js` 未做映射，则该参数**不生效**，签名仍会生成。本项目统一为 `skipSignature`，**默认按生成签名处理**，需在国内真机抓包复核。
+1. **已定案**：`module/song_url.js` 传 `notSign: true`，但 `util/request.js` 读取的是 `options.notSignature`。2026-11-11 真实网关实测证明**不带签名会被拒绝**（`status=0`、`error_code=20006`、`err signature`），因此本项目 `KugouRequestBuilder.skipSignature` 默认 `false`（始终签名）是正确行为，**不要按上游字面改成跳过签名**。详见 `docs/M0-Smoke-Test.md`。
 2. `song_url` 的 `clientver=11430` 会覆盖默认的 11440（标准版为 20489），签名必须基于覆盖后的最终参数计算。
 3. 概念版搜索的 `clientver=201` 同理。
 4. `openapicdn` 类 baseURL 需把参数拼进 URL 而非 query（M0 未涉及）。
 5. `POST` 请求的 body 需参与签名（M0 全为 GET，body 为空串）；M2 之后接入 POST 接口时必须补齐。
 6. 上游接口与风控策略会变；`kugou/` 模块必须保持独立，改动时先跑 golden 测试。
+7. 两套平台 token 不通用这一约束仍**未实测**（M0 均为未登录请求），M3 登录时必须验证。
+
+## 9. 真实网关实测要点（2026-11-11）
+
+- lite 与 standard 双平台搜索均 `status=1 / error_code=0`，说明两套 appid、clientver 与签名盐值都有效。
+- 概念版 lite 分支参数（`clientver=201`、`page_id=967177915`、`pid=411`、专属 `ppage_id`）生效，返回的 CDN 为 `fs.youthandroid2.kugou.com`。
+- `/v5/url` 成功时：`status=1`、`url: string[]`、`backupUrl: string[]`、`bitRate`、`timeLength`、`extName`；受限时：`status=2`、`fail_process=["pkg","buy"]`、`hash_offset` 试听区段。
+- 免 VIP 曲目（`Privilege` 为 0 或 8）可直接拿到完整 URL；VIP 曲目（`Privilege=10`）需登录态与概念版免费听 Auth，`IsFreePart=1` 可取试听片段。
+- `privilegefilter=1` 可让搜索只返回免费曲目，便于自动化测试与演示。
+- 本次请求量小，未触发 `ssa-code` 风控；真实 App 高频请求仍需实现 EchoMusic 的可恢复验证流程。

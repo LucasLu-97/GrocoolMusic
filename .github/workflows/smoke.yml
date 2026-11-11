@@ -1,0 +1,34 @@
+name: smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      keyword:
+        description: '搜索关键词（建议用免费曲目）'
+        required: false
+        default: '儿歌'
+
+permissions:
+  contents: read
+
+jobs:
+  protocol-smoke:
+    name: M0 real-gateway protocol check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Positive case — search and get a playable URL
+        # Runner 位于境外，酷狗网关可能不稳定；此工作流仅作诊断，不阻断发布。
+        continue-on-error: true
+        run: python tools/smoke_test.py --keyword "${{ inputs.keyword }}"
+
+      - name: Negative control — unsigned request must be rejected
+        continue-on-error: true
+        run: python tools/smoke_test.py --keyword 周杰伦 --skip-signature

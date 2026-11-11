@@ -3,12 +3,17 @@
 > 目标：**本机不需要安装 JDK、Gradle、Android SDK 或 Android Studio**。
 > 所有编译、签名、打包、发布都在 GitHub Actions 完成；本机只需要编辑源码与提交。
 
-## 两条工作流
+## 工作流
 
 | 工作流 | 触发 | 作用 |
 | --- | --- | --- |
 | `.github/workflows/check.yml` | push 到 `main` / PR / 手动 | JDK 17 + Gradle 8.10.2 + Android SDK 35；编译 `kugou` 与 `app` debug 包，跑签名 golden 测试 |
 | `.github/workflows/release.yml` | 手动 `workflow_dispatch` 或 push `v*` tag | 解码统一密钥 → 编译签名 release APK → `apksigner` 校验 → 发布 **pre-release** |
+| `.github/workflows/smoke.yml` | 手动 `workflow_dispatch` | 用 `tools/smoke_test.py` 打真实酷狗网关，验证签名 / 搜索 / 取流 |
+
+> `smoke.yml` 是**诊断工作流**：GitHub runner 位于境外，访问酷狗网关可能不稳定，
+> 因此步骤标记 `continue-on-error`，不阻断发布。以本机 / 国内网络运行结果为准，
+> 详见 `docs/M0-Smoke-Test.md`。
 
 ## 发一个测试版
 
