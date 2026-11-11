@@ -3,18 +3,22 @@ package dev.grocool.music
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,14 +29,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.unit.dp
 import dev.grocool.music.adapter.ChartItem
 import dev.grocool.music.adapter.ContentAdapter
-import dev.grocool.music.adapter.SongItem
 import dev.grocool.music.adapter.ShelfItem
+import dev.grocool.music.adapter.SongItem
 import dev.grocool.music.adapter.Tab
 import dev.grocool.music.adapter.chartItem
 import dev.grocool.music.adapter.shelfItems
@@ -42,9 +50,13 @@ import dev.grocool.music.ui.ChartDetailScreen
 import dev.grocool.music.ui.ExploreScreen
 import dev.grocool.music.ui.GrocoolTheme
 import dev.grocool.music.ui.HomeScreen
+import dev.grocool.music.ui.IosShapes
 import dev.grocool.music.ui.LibraryScreen
 import dev.grocool.music.ui.MiniPlayer
 import dev.grocool.music.ui.SearchScreen
+import dev.grocool.music.ui.glassBorder
+import dev.grocool.music.ui.glassSurface
+import dev.grocool.music.ui.secondaryLabel
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -64,10 +76,45 @@ private val TabIcon: Map<Tab, ImageVector> = mapOf(
 )
 
 /**
- * 应用外壳：底部导航 + 全局迷你播放器。
- *
- * 所有业务状态都在这里编排，屏幕只接收 [ShelfItem] / [SongItem] 等 adapter 模型，
- * 不接触酷狗原始响应。这是后续同步 BitChord UI 时唯一需要评审的装配文件。
+ * 浮动的 iOS 风格玻璃标签栏（替代 Material 3 NavigationBar）。
+ * 悬浮卡片 + squircle 连续圆角 + 选中态胶囊，是 Apple Music 底栏的排版语言。
+ */
+@Composable
+private fun GlassTabBar(selected: Tab, onSelect: (Tab) -> Unit) {
+    val shape = IosShapes.LargeCard
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .shadow(14.dp, shape, clip = false)
+            .clip(shape)
+            .background(glassSurface())
+            .border(0.5.dp, glassBorder(), shape)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Tab.entries.forEach { tab ->
+            val active = tab == selected
+            val tint = if (active) Accent else secondaryLabel()
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(IosShapes.Pill)
+                    .background(if (active) Accent.copy(alpha = 0.12f) else Color.Transparent)
+                    .clickable { onSelect(tab) }
+                    .padding(vertical = 7.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(TabIcon.getValue(tab), contentDescription = tab.label, tint = tint, modifier = Modifier.size(21.dp))
+                Text(tab.label, style = MaterialTheme.typography.labelSmall, color = tint)
+            }
+        }
+    }
+}
+
+/**
+ * 应用外壳：浮动玻璃标签栏 + 悬浮迷你播放器。
+ * 所有业务状态在此编排，屏幕只消费 adapter 模型，不接触酷狗原始响应。
  */
 @Composable
 private fun GrocoolApp() {
@@ -89,7 +136,6 @@ private fun GrocoolApp() {
     var status by remember { mutableStateOf("正在加载首页内容…") }
     var busy by remember { mutableStateOf(false) }
 
-    /** 首页多接口装配；失败时保留其它货架并显示具体错误。 */
     fun loadHome() {
         busy = true
         status = "正在加载首页内容…"
@@ -170,7 +216,6 @@ private fun GrocoolApp() {
         }
     }
 
-    // 首屏加载一次；Compose 重组不会重复触发（key = Unit）。
     LaunchedEffect(Unit) { loadHome() }
 
     Scaffold(
@@ -181,45 +226,26 @@ private fun GrocoolApp() {
                     player.toggle()
                     playing = player.isPlaying
                 }
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                    Tab.entries.forEach { item ->
-                        NavigationBarItem(
-                            selected = tab == item,
-                            onClick = {
-                                tab = item
-                                openChart = null
-                                when (item) {
-                                    Tab.LISTEN -> if (shelves.isEmpty()) loadHome()
-                                    Tab.EXPLORE -> if (charts.isEmpty()) loadCharts()
-                                    else -> Unit
-                                }
-                            },
-                            icon = { Icon(TabIcon.getValue(item), contentDescription = item.label) },
-                            label = { Text(item.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Accent,
-                                selectedTextColor = Accent,
-                                indicatorColor = Accent.copy(alpha = 0.12f),
-                            ),
-                        )
+                GlassTabBar(selected = tab) { item ->
+                    tab = item
+                    openChart = null
+                    when (item) {
+                        Tab.LISTEN -> if (shelves.isEmpty()) loadHome()
+                        Tab.EXPLORE -> if (charts.isEmpty()) loadCharts()
+                        else -> Unit
                     }
                 }
             }
         },
     ) { padding ->
-        val contentModifier = Modifier.fillMaxSize().then(
-            Modifier.padding(bottom = padding.calculateBottomPadding())
-        )
+        val contentModifier = Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())
         when (tab) {
             Tab.LISTEN -> HomeScreen(
                 shelves = shelves,
                 status = status,
                 busy = busy,
                 onKeyword = { doSearch(it, switchTab = true) },
-                onChart = { chart ->
-                    tab = Tab.EXPLORE
-                    openChartDetail(chart)
-                },
+                onChart = { chart -> tab = Tab.EXPLORE; openChartDetail(chart) },
                 onSong = ::play,
                 selectedHash = current?.hash,
                 modifier = contentModifier,

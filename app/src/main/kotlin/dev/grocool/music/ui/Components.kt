@@ -1,6 +1,7 @@
 package dev.grocool.music.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,60 +16,83 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import dev.grocool.music.adapter.ChartItem
 import dev.grocool.music.adapter.SongItem
 import dev.grocool.music.adapter.coverTint
-
-/** 章节标题：Apple Music 的大标题 + 副标题排版。 */
-@Composable
-fun SectionHeader(title: String, subtitle: String = "", modifier: Modifier = Modifier) {
-    Column(modifier = modifier.padding(top = 22.dp, bottom = 12.dp)) {
-        Text(
-            title,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        if (subtitle.isNotBlank()) {
-            Text(
-                subtitle,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
-            )
-        }
-    }
-}
+import dev.grocool.music.ui.shape.SquirclePillShape
 
 /**
- * 封面占位。M2 第一批不引入图片加载库（低资源、避免额外依赖与内存开销），
- * 用 hash 生成稳定色调 + 歌名首字；后续接入 Coil 时只改这一个组件。
+ * iOS-style shared components.
+ *
+ * Deliberately avoids Material 3's `Surface` / `AssistChip` / `OutlinedTextField`
+ * / `NavigationBar`: those were exactly the elements that made earlier builds read
+ * as plain MD3. Shapes come from the ported Apple continuous-corner implementation,
+ * surfaces are semi-transparent glass cards, and controls use squircle pills.
  */
+
 @Composable
-fun CoverBox(title: String, hash: String, size: Int = 52, modifier: Modifier = Modifier) {
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    val shape = IosShapes.Card
+    val base = glassSurface()
+    val outline = glassBorder()
+    Box(
+        modifier = modifier
+            .shadow(8.dp, shape, clip = false)
+            .clip(shape)
+            .background(base)
+            .border(0.5.dp, outline, shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+    ) { content() }
+}
+
+/** Real cover art via Coil; a stable tinted initial shows while loading. */
+@Composable
+fun CoverBox(
+    title: String,
+    hash: String,
+    size: Int = 52,
+    coverUrl: String = "",
+    modifier: Modifier = Modifier,
+) {
+    val shape = IosShapes.SmallCard
     Box(
         modifier = modifier
             .size(size.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(coverTint(hash)),
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    listOf(coverTint(hash), coverTint(hash).copy(alpha = 0.65f))
+                )
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -77,10 +101,96 @@ fun CoverBox(title: String, hash: String, size: Int = 52, modifier: Modifier = M
             fontWeight = FontWeight.Bold,
             fontSize = (size / 2.6).sp,
         )
+        if (coverUrl.startsWith("http")) {
+            AsyncImage(
+                model = coverUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(size.dp).clip(shape),
+            )
+        }
     }
 }
 
-/** 歌曲行。可用于搜索结果、榜单详情、首页歌曲货架。 */
+/** Apple-style large section title with a red subtitle. */
+@Composable
+fun SectionHeader(title: String, subtitle: String = "", modifier: Modifier = Modifier) {
+    Column(modifier = modifier.padding(top = 26.dp, bottom = 12.dp)) {
+        Text(
+            title,
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        if (subtitle.isNotBlank()) {
+            Text(subtitle, style = MaterialTheme.typography.labelMedium, color = Accent)
+        }
+    }
+}
+
+/** iOS search field: filled grey squircle, magnifier prefix, no MD3 outline. */
+@Composable
+fun IosSearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .clip(SquirclePillShape())
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(start = 14.dp, end = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.Search,
+            contentDescription = null,
+            tint = secondaryLabel(),
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.size(8.dp))
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 15.sp,
+            ),
+            cursorBrush = SolidColor(Accent),
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.size(8.dp))
+        Box(
+            modifier = Modifier
+                .clip(SquirclePillShape())
+                .background(Accent)
+                .clickable(onClick = onSearch)
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("搜索", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+/** Squircle keyword pill, replacing Material 3 AssistChip. */
+@Composable
+fun KeywordPill(text: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(SquirclePillShape())
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+/** Song row inside an iOS glass card. */
 @Composable
 fun SongRow(
     item: SongItem,
@@ -88,83 +198,68 @@ fun SongRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = if (selected) Accent.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surface,
-    ) {
+    GlassCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             if (item.rank > 0) {
                 Text(
                     "${item.rank}",
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (item.rank <= 3) Accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    color = if (item.rank <= 3) Accent else secondaryLabel(),
                     modifier = Modifier.width(26.dp),
                 )
             }
-            CoverBox(item.title, item.hash, size = 46)
+            CoverBox(item.title, item.hash, size = 46, coverUrl = item.coverUrl)
             Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     item.title,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    color = if (selected) Accent else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     item.subtitle,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    color = secondaryLabel(),
                 )
             }
             Spacer(Modifier.size(6.dp))
             Column(horizontalAlignment = Alignment.End) {
-                Text(item.badge, fontSize = 11.sp, color = Accent)
-                Text(
-                    item.durationLabel,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                )
+                Text(item.badge, style = MaterialTheme.typography.labelSmall, color = Accent)
+                Text(item.durationLabel, style = MaterialTheme.typography.labelSmall, color = secondaryLabel())
             }
         }
     }
 }
 
-/** 横向榜单卡片货架。 */
+/** Horizontal chart cards with real artwork. */
 @Composable
 fun ChartShelf(charts: List<ChartItem>, onClick: (ChartItem) -> Unit) {
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = PaddingValues(end = 20.dp),
     ) {
         items(charts, key = { it.id }) { chart ->
-            Surface(
-                modifier = Modifier
-                    .width(150.dp)
-                    .clickable { onClick(chart) },
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-            ) {
+            GlassCard(modifier = Modifier.width(150.dp), onClick = { onClick(chart) }) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    CoverBox(chart.title, chart.id.toString(), size = 126)
-                    Spacer(Modifier.height(10.dp))
+                    CoverBox(chart.title, chart.id.toString(), size = 126, coverUrl = chart.coverUrl)
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         chart.title,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         chart.subtitle.take(24),
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                        color = secondaryLabel(),
                     )
                 }
             }
@@ -172,30 +267,30 @@ fun ChartShelf(charts: List<ChartItem>, onClick: (ChartItem) -> Unit) {
     }
 }
 
-/** 底部迷你播放器，全局常驻。 */
+/** Floating glass mini player — a card, not an MD3 bottom bar. */
 @Composable
 fun MiniPlayer(item: SongItem?, playing: Boolean, onToggle: () -> Unit) {
     if (item == null) return
-    Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 6.dp) {
+    GlassCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CoverBox(item.title, item.hash, size = 40)
+            CoverBox(item.title, item.hash, size = 42, coverUrl = item.coverUrl)
             Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     item.title,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     item.subtitle,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    color = secondaryLabel(),
                 )
             }
             IconButton(onClick = onToggle) {
@@ -209,22 +304,13 @@ fun MiniPlayer(item: SongItem?, playing: Boolean, onToggle: () -> Unit) {
     }
 }
 
-/** 状态提示行：把加载中 / 错误 / 空结果统一呈现，避免静默空白。 */
 @Composable
 fun StatusLine(text: String, busy: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (busy) {
-            androidx.compose.material3.CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                color = Accent,
-                strokeWidth = 2.dp,
-            )
+            CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Accent, strokeWidth = 2.dp)
             Spacer(Modifier.size(8.dp))
         }
-        Text(
-            text,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-        )
+        Text(text, style = MaterialTheme.typography.labelSmall, color = secondaryLabel())
     }
 }

@@ -1,6 +1,5 @@
 package dev.grocool.music.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,21 +10,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.grocool.music.adapter.ChartItem
 import dev.grocool.music.adapter.SongItem
 
@@ -46,33 +41,26 @@ fun ExploreScreen(
             Column(modifier = Modifier.padding(top = 8.dp, bottom = 10.dp)) {
                 Text(
                     "浏览",
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
-                Text("酷狗官方排行榜", fontSize = 14.sp, color = Accent)
+                Text("酷狗官方排行榜", style = MaterialTheme.typography.labelMedium, color = Accent)
                 StatusLine(status, busy)
             }
         }
         items(charts, key = { it.id }) { chart ->
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onChart(chart) },
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surface,
-            ) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), onClick = { onChart(chart) }) {
                 Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CoverBox(chart.title, chart.id.toString(), size = 52)
+                    CoverBox(chart.title, chart.id.toString(), size = 52, coverUrl = chart.coverUrl)
                     Spacer(Modifier.size(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(chart.title, fontWeight = FontWeight.Medium)
+                        Text(chart.title, style = MaterialTheme.typography.titleMedium)
                         Text(
                             chart.subtitle.take(40),
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            color = secondaryLabel(),
                         )
                     }
                 }
@@ -106,8 +94,8 @@ fun ChartDetailScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = Accent)
                 }
                 Column {
-                    Text(chart.title, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Text(chart.subtitle.take(36), fontSize = 12.sp, color = Accent)
+                    Text(chart.title, style = MaterialTheme.typography.titleLarge)
+                    Text(chart.subtitle.take(36), style = MaterialTheme.typography.labelMedium, color = Accent)
                 }
             }
             StatusLine(status, busy)

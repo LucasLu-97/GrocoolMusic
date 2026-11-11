@@ -8,15 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.grocool.kugou.ShelfKind
 import dev.grocool.music.adapter.ChartItem
 import dev.grocool.music.adapter.ShelfItem
@@ -48,11 +44,14 @@ fun HomeScreen(
             Column(modifier = Modifier.padding(top = 8.dp)) {
                 Text(
                     "Grocool Music",
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
-                Text("收听", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Accent)
+                Text(
+                    "收听",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Accent,
+                )
                 StatusLine(status, busy)
             }
         }
@@ -64,13 +63,7 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    shelf.keywords.forEach { keyword ->
-                        AssistChip(
-                            onClick = { onKeyword(keyword) },
-                            label = { Text(keyword, fontSize = 12.sp) },
-                            colors = AssistChipDefaults.assistChipColors(labelColor = Accent),
-                        )
-                    }
+                    shelf.keywords.forEach { keyword -> KeywordPill(keyword) { onKeyword(keyword) } }
                 }
 
                 ShelfKind.CHARTS -> ChartShelf(shelf.charts, onChart)
