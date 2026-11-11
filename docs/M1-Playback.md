@@ -36,11 +36,28 @@
 ## 完成标志与验收
 
 - [x] Compose + Media3 + 协程依赖接入，CI 编译 release / debug 通过
-- [ ] 真机实测：搜索「儿歌」→ 点一首免费曲目 → **出声**
-- [ ] 真机实测：VIP 曲目显示试听或明确提示，不崩溃
+- [x] 真机实测：搜索「儿歌」→ 点一首免费曲目 → **出声**（2026-11-11，见下节证据）
+- [x] 真机实测：VIP 曲目有明确标签且不崩溃（列表中「两只老虎 / 小兔子乖乖 / 虫儿飞」等显示 VIP，点击免费曲正常）
 
-真机验收需要**有线 ADB 连接**：`adb devices` 确认设备在线后 `adb install -r <apk>`，
-用 `adb logcat` 观察取流与播放器错误。到这一步会主动提醒发起人插线。
+真机验收使用**有线 ADB**：`adb devices` 确认设备在线 → `adb install -r <apk>` →
+`adb logcat -d -s GrocoolMusic` 观察取流状态。到这一步会主动提醒发起人插线。
+
+## 真机验收结果（2026-11-11，M1 收官）
+
+设备 `13a4bf99`（Xiaomi 17 / `25113PN0EC`），`v0.2.1-build.6`（versionCode 6），
+由发起人手动点击屏幕，本环境只做只读采集（`tools/adb_watch.py`）。
+
+| 证据 | 内容 |
+| --- | --- |
+| 搜索日志 | `D GrocoolMusic: search status=1 error=0 msg=null bytes=84701` |
+| 取流日志 | `D GrocoolMusic: stream status=1 error=null msg=null bytes=1906` |
+| 界面状态 | `正在播放：卖报歌`；列表显示「免费 / VIP」标签与歌手、专辑信息 |
+| **真实出声** | `D AudioTrackImpl: [audioTrackData][fine] 50s(f:50478 ...) : pid 19294 uid 10408 sessionId 72689 sr 44100 ch 2 fmt 1 maxAmplitude 6561` |
+| 崩溃 | `fatal_lines` 为空，无 `AndroidRuntime` / `FATAL EXCEPTION` |
+
+`AudioTrackImpl` 这一行是硬证据：App 进程（pid 19294）建立了 44.1 kHz / 双声道 /
+PCM 音轨并持续输出 **50 秒**，`maxAmplitude=6561` 非零 —— 不是静音，也不是只改了状态文字。
+结论：**搜索 → 取流 → Media3 出声闭环在真机上成立**，M1 验收通过。
 
 ## 真机反馈与根因（2026-11-11）
 
@@ -61,41 +78,47 @@
 > 排查命令（有线 ADB）：`adb logcat -d -s GrocoolMusic`；
 > 界面上也会直接显示 `酷狗返回 status=..., error_code=...`。
 
-## ADB 自动化验证
-
-`tools/adb_verify.py` 把真机验证做成一条命令：等待设备上线 → `adb install -r`
-覆盖安装 → 启动 App → 用 `uiautomator dump` 找到「搜索」按钮并点击 → 点击第一首
-「免费」曲目 → 抓 `adb logcat -d -s GrocoolMusic` → 输出结论（可写 JSON 结果文件）。
-
-```bash
-python tools/adb_verify.py --apk C:/path/GrocoolMusic-0.2.1-release.apk --wait 600 \
-  --result-file C:/tmp/adb_verify_result.json
-```
+## ADB 工具与分工
 
 本机 adb 可执行文件：`D:\VibeCodingSpace\tools\platform-tools\adb.exe`（v37.0.1）。
+2026-11-11 设备已成功连通：`13a4bf99   device`（早期 `PresentOnly` 为空是手机尚未
+以数据/ADB 模式握手，重插并授权后即恢复；WinUSB 驱动全程正常、无故障码）。
 
-**2026-11-11 环境诊断**：`adb devices` 持续为空。WinUSB 驱动本身正常
-（`DEVPKEY_Device_Service=WINUSB`、`HasProblem=False`），但
-`DEVPKEY_Device_IsPresent=False`，且 `Get-PnpDevice -PresentOnly` 过滤后没有任何
-Xiaomi / Android 设备 —— 系统里那些 `USB\VID_18D1&PID_4E11` 记录是**历史条目，
-手机当前并未以数据/ADB 模式在线**。网络 ADB（`10.42.0.1:5555`）与 mDNS 也均无响应。
+| 工具 | 行为 | 适用场景 |
+| --- | --- | --- |
+| `tools/adb_verify.py` | 等待设备 → `install -r` → 启动 → **自动点击**搜索与免费曲目 → 抓日志 | 无人值守、屏幕已解锁且 App 在前台 |
+| `tools/adb_watch.py` | **纯只读**：只轮询 `logcat -d` 与结束时读一次屏幕文字，绝不 tap / swipe / 唤醒 / 装包 | **推荐**：由人手动点屏幕，本环境只采集分析 |
 
-因此在手机侧完成一次以下操作后，上面的脚本会自动接管，无需再手动装包/点按：
+```bash
+# 推荐流程：先清日志，再启动只读采集，然后人工操作手机
+adb logcat -c
+python tools/adb_watch.py --duration 900 --result-file C:/tmp/watch.json
+```
 
-1. 换一条**支持数据传输**的 USB 线（充电线不行），或换一个 USB 口；
-2. 下拉通知栏把 USB 用途从「仅充电」改为「传输文件 (MTP)」；
-3. 确认「允许 USB 调试？」弹窗点「允许」（可勾选「一律允许」）；若仍无设备，
-   在开发者选项里「撤销 USB 调试授权」后重新插拔。
+`adb_watch.py` 每轮增量写结果文件，检测到 `stream status=` 后再收 8 秒自动结束，
+并给出 `PLAYBACK_OK / SEARCH_OK_NO_PLAY / GATEWAY_ERROR / NO_APP_LOGS` 判定。
+真机验收采用此模式：人点屏幕、脚本只读，互不干扰。
 
-备选：若手机开启的是 Android 11+ **无线调试**，把开发者选项里显示的
-`IP:端口` 给我，用 `adb connect <IP>:<端口>` 即可全自动，不依赖 USB 驱动状态。
+**两个已修的工具坑**：
+
+1. `adb devices -l` 的列用**空格**对齐（`13a4bf99      device product:...`），
+   而不带 `-l` 时用 **TAB**。原 `adb_verify.py` 按 `"\tdevice"` 匹配，导致设备明明在线
+   却永远判定「no device」、后台任务空跑 10 分钟。已改为解析 `line.split()[1]`。
+2. 自动点击在**屏幕锁定 / App 不在前台**时会静默失效（UI dump 能拿到按钮，但
+   tap 不触发，`status_line` 为空）。因此默认推荐 `adb_watch.py` 人工点击模式，
+   不要把 `adb_verify.py` 返回 1 直接当成「功能失败」。
+
+下载 Release 用 `tools/download_release.py`：并发测速 10 个镜像 → 选最优 →
+复用探测阶段已下完的文件 → 校验 zip / `AndroidManifest.xml` / dex / sha256。
+实测 `gh-proxy.com` 约 1.2–2.1 MB/s，12.8 MB APK 在 6–10 秒内下完；
+直链在本环境被代理拦（`CONNECT 502`），其余多数镜像不可用。
 
 ## 发布状态
 
 - `v0.2.0-build.5`（pre-release，`GrocoolMusic-0.2.0-release.apk`，12.8 MB）：首个可搜歌播放版本；CI 编译 + 签名校验 + golden 测试全绿。**真机搜索无结果，根因见上节，已由 0.2.1 修复**。
-- `v0.2.1-build.6`（pre-release，12.8 MB）：修复设备 MID 为空导致的 `error_code=20006`，并让网关错误可见。请覆盖安装此版本重新验证。
-- 与 0.1.x / 0.2.0 使用同一张签名证书（`0535ad27813ce0ca...`），`versionCode` 递增，可直接覆盖安装。
-- 真机验收尚未完成，需要**有线 ADB**：`adb devices` → `adb install -r GrocoolMusic-0.2.1-release.apk` → `adb logcat -d -s GrocoolMusic` 观察搜索与取流状态。
+- `v0.2.1-build.6`（pre-release，12,859,413 bytes，sha256 `d971601e…`）：修复设备 MID 为空导致的 `error_code=20006`，并让网关错误可见。**真机验收通过（搜索 / 取流 / 出声全链路）**。
+- 与 0.1.x / 0.2.0 使用同一张签名证书（`0535ad27813ce0ca...`），`versionCode` 3→4→5→6 递增，可直接覆盖安装；本次真机覆盖安装 `Success`。
+- 至此 M1 完成，下一步是 M1 后段：按 tag 导入 BitChord `v1.9.1` UI 基线并裁剪国际服务，随后进入 M2 内容层。
 
 ## 已知限制（有意为之）
 

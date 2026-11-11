@@ -41,8 +41,19 @@ def adb(args, timeout=90):
 
 
 def device_lines():
+    """Return state lines from `adb devices -l`.
+
+    NOTE: with `-l` the columns are padded with SPACES (e.g.
+    "13a4bf99               device product:..."), while plain `adb devices`
+    uses a TAB. Do not match on "\\tdevice" here.
+    """
     out = adb(["devices", "-l"]).stdout
-    return [line for line in out.splitlines() if "\tdevice" in line or "\tunauthorized" in line or "\toffline" in line]
+    lines = []
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and parts[1] in ("device", "unauthorized", "offline"):
+            lines.append(line)
+    return lines
 
 
 def wait_for_device(seconds: int):
@@ -50,7 +61,7 @@ def wait_for_device(seconds: int):
     last = ""
     while time.time() < deadline:
         lines = device_lines()
-        ready = [line for line in lines if "\tdevice" in line]
+        ready = [line for line in lines if line.split()[1] == "device"]
         if ready:
             return ready[0].split()[0]
         state = "; ".join(lines) if lines else "no device"
