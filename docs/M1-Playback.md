@@ -42,6 +42,12 @@
 真机验收需要**有线 ADB 连接**：`adb devices` 确认设备在线后 `adb install -r <apk>`，
 用 `adb logcat` 观察取流与播放器错误。到这一步会主动提醒发起人插线。
 
+## 发布状态
+
+- `v0.2.0-build.5`（pre-release，`GrocoolMusic-0.2.0-release.apk`，12.8 MB）：首个可搜歌播放版本；CI 编译 + 签名校验 + golden 测试全绿。
+- 与 0.1.0 / 0.1.1 使用同一张签名证书（`0535ad27813ce0ca...`），`versionCode=5`，可直接覆盖安装。
+- 真机验收尚未完成，需要**有线 ADB**：`adb devices` → `adb install -r GrocoolMusic-0.2.0-release.apk` → `adb logcat` 观察取流与播放器错误。
+
 ## 已知限制（有意为之）
 
 - 播放只在 Activity 生命周期内，无后台播放 / 通知栏 / 锁屏控制 —— M2 换 `MediaSessionService` + 前台服务。

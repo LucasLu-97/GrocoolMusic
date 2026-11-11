@@ -62,9 +62,13 @@ C:\Users\Lucas.Lu\.workbuddy\secrets\
 | --- | --- | --- | --- |
 | 0.1.0 | `v0.1.0-build.3` | 3 | 817593 bytes |
 | 0.1.1 | `v0.1.1-build.4` | 4 | 818405 bytes |
+| 0.2.0 | `v0.2.0-build.5` | 5 | 12859413 bytes（M1，含 Compose + Media3） |
 
-- 两次发布都由同一个 `KEYSTORE_BASE64` 解码签名，CI 的 `apksigner verify` 均通过。
-- 下载两个 APK 并解析 **APK Signing Block**（v2，pair ID `0x7109871a`），提取到的 X.509 证书 DER 的 SHA-256 前缀**同为 `0535ad27813ce0ca`** → 确认是同一张签名证书。
+- 三次发布都由同一个 `KEYSTORE_BASE64` 解码签名，CI 的 `apksigner verify` 均通过。
+- 下载 0.1.0 / 0.1.1 的 APK 并解析 **APK Signing Block**（v2，pair ID `0x7109871a`），提取到的 X.509 证书 DER 的 SHA-256 前缀**同为 `0535ad27813ce0ca`** → 确认是同一张签名证书。
+- 0.2.0 的发布日志给出了官方指纹：`apksigner --print-certs` 输出
+  `V2 Signer: certificate DN: CN=Grocool Music Release, O=GrocoolMusic, C=CN`，
+  `SHA-256 digest: 0535ad27813ce0ca074b91fcef2944ea8c0c48f61e102f4d6daaed7baea8901c` —— 前缀一致，三版同证书。
 - `applicationId` 固定、`versionCode` 3 → 4 递增 → **覆盖安装四要素全部成立**。
 - 真机实测方法：先装 0.1.0，再直接安装 0.1.1，应无需卸载、本地数据保留。
 - `release.yml` 的 `Verify APK is signed` 步骤已加 `--print-certs`，并把证书指纹写入 job summary，后续每个版本都可直接比对。
