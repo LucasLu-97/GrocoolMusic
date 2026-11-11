@@ -33,11 +33,16 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Ensure Android platform 35
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" > /dev/null
+      - name: Prepare Android SDK
+        run: |
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ -x "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" > /dev/null 2>&1 || true
+          fi
+          ls "$ANDROID_HOME/platforms"
 
       - name: Resolve version and tag
         id: ver
