@@ -1,0 +1,29 @@
+# 构建产物
+.gradle/
+build/
+**/build/
+.cxx/
+.externalNativeBuild/
+captures/
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# 本地配置与密钥：绝不入库
+local.properties
+keystore.properties
+*.jks
+*.keystore
+*.pepk
+.env
+.env.*
+*.pat
+secrets/
+gradle/wrapper/gradle-wrapper.jar.bak
+
+# 运行期生成的凭据与缓存
+kugou/.cookies/

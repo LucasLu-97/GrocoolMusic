@@ -1,0 +1,58 @@
+Grocool Music
+Copyright (C) 2026 Grocool Music contributors
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See the LICENSE file for the full text.
+
+--------------------------------------------------------------------------
+Derivative-work notices
+--------------------------------------------------------------------------
+
+This project is a modified derivative of the following GPL-3.0 projects:
+
+1. BitChord
+   https://github.com/kushagrasinghx/BitChord
+   Baseline: v1.9.1 (commit acf219a7e4a7, 2026-11-06)
+   License: GNU General Public License v3.0
+   Used as: Android UI baseline, playback layer and build skeleton.
+   Modifications: YouTube Music / Google / Spotify / Discord / Last.fm /
+   Cast / Wear OS data sources and dependencies are removed; a new Kugou data
+   adapter layer is introduced; application identity, signing and update
+   endpoints are replaced.
+
+2. EchoMusic
+   https://github.com/hoowhoami/EchoMusic
+   Baseline: v2.3.3-beta.1 (commit f3c6964512f2, 2026-11-09)
+   License: GNU General Public License v3.0
+   Used as: reference implementation for Kugou API call chains, lite/concept
+   edition token handling, free-listening Auth flow and human-verification
+   handling.
+   Modifications: call chains are re-implemented in Kotlin for Android; no
+   Electron / Node.js runtime is shipped in the Android application.
+
+3. KuGouMusicApi
+   https://github.com/MakcRe/KuGouMusicApi
+   Baseline: commit 7ac64e1cdd33, 2026-11-04
+   License: MIT
+   Used as: interface definitions, request signature algorithms and platform
+   (standard / lite) configuration. Signature logic is re-implemented in
+   Kotlin in the kugou/ module. The MIT copyright notice is retained here:
+
+     Copyright (c) MakcRe and KuGouMusicApi contributors
+     Permission is hereby granted, free of charge, to any person obtaining a
+     copy of this software and associated documentation files (the
+     "Software"), to deal in the Software without restriction, including
+     without limitation the rights to use, copy, modify, merge, publish,
+     distribute, sublicense, and/or sell copies of the Software, and to
+     permit persons to whom the Software is furnished to do so, subject to
+     the following conditions: The above copyright notice and this permission
+     notice shall be included in all copies or substantial portions of the
+     Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+--------------------------------------------------------------------------
+Changes from the upstream projects are marked in source files and in
+docs/UPSTREAM.md. Complete corresponding source code for every released
+binary is available in this repository, including build scripts and signing
+configuration instructions.
