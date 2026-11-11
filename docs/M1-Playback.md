@@ -42,6 +42,25 @@
 真机验收需要**有线 ADB 连接**：`adb devices` 确认设备在线后 `adb install -r <apk>`，
 用 `adb logcat` 观察取流与播放器错误。到这一步会主动提醒发起人插线。
 
+## 真机反馈与根因（2026-11-11）
+
+首个真机版本 `v0.2.0-build.5` 反馈「搜索没有结果」。用 `tools/smoke_test.py`
+独立复现请求参数，定位到 **`KugouCredentials.mid` 默认为空字符串**：
+
+| mid | 网关响应 |
+| --- | --- |
+| 32 位 hex（冒烟脚本基线） | `status=1`，30 条结果 |
+| **空字符串（Kotlin 原默认值）** | **`status=0`、`error_code=20006`，0 条结果** |
+| `"-"` | `status=1`，30 条结果 |
+
+修复：默认 mid 改为与冒烟脚本一致的 32 位 hex；M2 起改用基于 `ANDROID_ID`
+的设备级标识并持久化。同时在 `KugouResponse.state()` 中解析响应状态，
+`KugouMusicRepository` 在 `status != 1` 时抛出带错误码的异常，并用
+`Log.d("GrocoolMusic", ...)` 把状态打到 logcat —— 避免再把任何失败都显示成「没有结果」。
+
+> 排查命令（有线 ADB）：`adb logcat -d -s GrocoolMusic`；
+> 界面上也会直接显示 `酷狗返回 status=..., error_code=...`。
+
 ## 发布状态
 
 - `v0.2.0-build.5`（pre-release，`GrocoolMusic-0.2.0-release.apk`，12.8 MB）：首个可搜歌播放版本；CI 编译 + 签名校验 + golden 测试全绿。

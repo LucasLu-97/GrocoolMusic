@@ -77,7 +77,28 @@ object KugouResponse {
 
     private fun cleanText(value: String): String =
         value.replace(Regex("<[^>]*>"), "").trim()
+
+    /** 响应状态：把「确实没有结果」与「验签 / 风控失败」区分开。 */
+    fun state(rawJson: String): ResponseState = runCatching {
+        val root = Json.parseToJsonElement(rawJson).jsonObject
+        ResponseState(
+            status = root["status"]?.jsonPrimitive?.intOrNull,
+            errorCode = root["error_code"]?.jsonPrimitive?.intOrNull
+                ?: root["errcode"]?.jsonPrimitive?.intOrNull,
+            message = listOf("err_msg", "msg", "error")
+                .firstNotNullOfOrNull { key ->
+                    root[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+                },
+        )
+    }.getOrDefault(ResponseState(null, null, "响应解析失败"))
 }
+
+/** 网关响应状态；`status=1` 为成功，`0` 常为验签 / 风控失败。 */
+data class ResponseState(
+    val status: Int?,
+    val errorCode: Int?,
+    val message: String?,
+)
 
 /** 协议层轻量曲目 DTO；完整领域模型在 M2 的 `KugouRepository` 中定义。 */
 data class KugouTrack(

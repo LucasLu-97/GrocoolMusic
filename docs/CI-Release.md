@@ -99,6 +99,7 @@ C:\Users\Lucas.Lu\.workbuddy\secrets\
 - **空仓库不能直接建 blob**：Git Data API 对空仓库返回 409 `Git Repository is empty`，需先用 contents API 写入一个种子文件初始化默认分支。
 - `kugou` 的网络实现必须用 `HttpURLConnection`，不能用 `java.net.http.HttpClient` —— 后者在 Android 运行时不存在。
 - **引入 AndroidX / Compose / Media3 后必须在 `gradle.properties` 打开 `android.useAndroidX=true`**，否则 `:app:checkDebugAarMetadata` 直接报 "contains AndroidX dependencies, but the android.useAndroidX property is not enabled"。M1 首次编译即踩此坑。
+- **设备 MID 不能为空**：真机首版搜索无结果，根因是 `KugouCredentials.mid=""` 导致网关返回 `status=0 / error_code=20006`。用独立冒烟脚本复现确认后改为 32 位 hex 默认值；App 层必须解析并展示响应状态，不能把失败一律当成「空结果」。
 
 ## M0 骨架 APK 的定位
 

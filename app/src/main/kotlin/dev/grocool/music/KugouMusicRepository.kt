@@ -1,5 +1,6 @@
 package dev.grocool.music
 
+import android.util.Log
 import dev.grocool.kugou.KugouApi
 import dev.grocool.kugou.KugouResponse
 import dev.grocool.kugou.KugouTrack
@@ -19,7 +20,15 @@ class KugouMusicRepository(
 ) {
     suspend fun search(keyword: String): Result<List<KugouTrack>> = runCatching {
         withContext(Dispatchers.IO) {
-            KugouResponse.searchTracks(api.search(keyword))
+            val raw = api.search(keyword)
+            val state = KugouResponse.state(raw)
+            Log.d(TAG, "search status=${state.status} error=${state.errorCode} msg=${state.message} bytes=${raw.length}")
+            if (state.status != 1) {
+                throw IllegalStateException(
+                    "酷狗返回 status=${state.status}, error_code=${state.errorCode}, msg=${state.message ?: ""}"
+                )
+            }
+            KugouResponse.searchTracks(raw)
         }
     }
 
@@ -29,7 +38,14 @@ class KugouMusicRepository(
      */
     suspend fun streamUrl(hash: String, freePart: Boolean = false): Result<String?> = runCatching {
         withContext(Dispatchers.IO) {
-            KugouResponse.streamUrl(api.songUrl(hash, quality = "128", freePart = freePart))
+            val raw = api.songUrl(hash, quality = "128", freePart = freePart)
+            val state = KugouResponse.state(raw)
+            Log.d(TAG, "stream status=${state.status} error=${state.errorCode} msg=${state.message} bytes=${raw.length}")
+            KugouResponse.streamUrl(raw)
         }
+    }
+
+    private companion object {
+        const val TAG = "GrocoolMusic"
     }
 }

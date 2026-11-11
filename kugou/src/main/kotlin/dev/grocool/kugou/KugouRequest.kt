@@ -5,7 +5,14 @@ import java.net.URLEncoder
 /** 登录态与设备标识。lite 与标准版的 token 必须分开存储，不可复用。 */
 data class KugouCredentials(
     val dfid: String = "-",
-    val mid: String = "",
+    /**
+     * 设备 MID。2026-11-11 真机反馈定位：**空字符串会让网关直接返回
+     * `status=0 / error_code=20006`，搜索结果为空**（独立脚本复现确认）。
+     * 上游 server.js 用 `calculateMid(UUID)` 生成 32 位 hex，这里先给一个
+     * 与 M0 冒烟脚本一致的稳定非空默认值；M2 应替换为基于 ANDROID_ID
+     * 的设备级标识并持久化。
+     */
+    val mid: String = "796b1ed3497b28a7c4f5626c84a88ef7",
     val token: String = "",
     val userId: Long = 0,
     val webglHash: String? = null,
