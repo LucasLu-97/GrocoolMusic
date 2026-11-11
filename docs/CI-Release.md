@@ -11,9 +11,10 @@
 | `.github/workflows/release.yml` | 手动 `workflow_dispatch` 或 push `v*` tag | 解码统一密钥 → 编译签名 release APK → `apksigner` 校验 → 发布 **pre-release** |
 | `.github/workflows/smoke.yml` | 手动 `workflow_dispatch` | 用 `tools/smoke_test.py` 打真实酷狗网关，验证签名 / 搜索 / 取流 |
 
-> `smoke.yml` 是**诊断工作流**：GitHub runner 位于境外，访问酷狗网关可能不稳定，
-> 因此步骤标记 `continue-on-error`，不阻断发布。以本机 / 国内网络运行结果为准，
-> 详见 `docs/M0-Smoke-Test.md`。
+> `smoke.yml` 是**诊断工作流**：GitHub runner 位于境外，实测搜索可过但取流会被
+> 酷狗风控拦截（`ssa-code` + `errcode 20028 本次请求需要验证`），因此步骤标记
+> `continue-on-error`，不阻断发布。M0 验收以本机 / 国内网络运行结果为准，
+> 详见 `docs/M0-Smoke-Test.md`。同时这也说明人机验证流程是 M3/M4 的必需工作。
 
 ## 发一个测试版
 

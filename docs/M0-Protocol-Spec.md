@@ -88,5 +88,5 @@ kg-rf    : B9EDA08A64250DEFFBCADDEE00F8F25F
 - 概念版 lite 分支参数（`clientver=201`、`page_id=967177915`、`pid=411`、专属 `ppage_id`）生效，返回的 CDN 为 `fs.youthandroid2.kugou.com`。
 - `/v5/url` 成功时：`status=1`、`url: string[]`、`backupUrl: string[]`、`bitRate`、`timeLength`、`extName`；受限时：`status=2`、`fail_process=["pkg","buy"]`、`hash_offset` 试听区段。
 - 免 VIP 曲目（`Privilege` 为 0 或 8）可直接拿到完整 URL；VIP 曲目（`Privilege=10`）需登录态与概念版免费听 Auth，`IsFreePart=1` 可取试听片段。
+- 本次请求量小，本机（国内出口）未触发 `ssa-code` 风控；但**境外 GitHub Actions runner 实测取流被拦截**：`ssa-code: gz_tx_event_...` + `{"errcode":20028,"status":0,"error":"本次请求需要验证"}`。真实 App 高频请求必须实现 EchoMusic 的可恢复验证流程与 `sid`/`edt` 行为指纹。
 - `privilegefilter=1` 可让搜索只返回免费曲目，便于自动化测试与演示。
-- 本次请求量小，未触发 `ssa-code` 风控；真实 App 高频请求仍需实现 EchoMusic 的可恢复验证流程。

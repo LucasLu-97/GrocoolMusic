@@ -52,3 +52,19 @@ python tools/smoke_test.py --keyword 周杰伦 --skip-signature   # 预期 FAIL�
 | 统一签名 APK 发布 | ✅ `v0.1.0-build.3` pre-release |
 
 > 本测试仅用于验证协议正确性，不存储、不传播任何音频文件；返回的 URL 未写入仓库。
+
+## 云端 CI 对照（境外 runner）
+
+`smoke.yml` 在 GitHub Actions（境外 IP）上实测的结果与本机不同：
+
+| 步骤 | 结果 |
+| --- | --- |
+| 搜索 | 验签通过，`status=1`（与本机一致） |
+| 取流 | **被风控拦截**：响应头 `ssa-code: gz_tx_event_...`，响应体 `{"errcode":20028,"status":0,"error":"本次请求需要验证"}` |
+| 负对照（不带签名） | 仍正确返回 `err signature` |
+
+三条结论：
+
+1. **国内网络取流可行，境外 IP 会触发酷狗 SSA 人机验证**，因此 `smoke.yml` 只能作为诊断工作流（已设 `continue-on-error`），不能当作 M0 验收依据；验收以本机 / 国内网络结果为准。
+2. 真实 App **必须**实现 EchoMusic `KugouVerificationFlow.vue` / `kugouVerification.ts` 的可恢复验证流程与 `sid` / `edt` 行为指纹生成——这是 M3/M4 的硬性工作，不是可选项。这也再次印证「以实践者为准」的原则。
+3. 不要在 CI 里高频打真实接口，以免风控策略升级；需要时按需手动触发。
