@@ -5,8 +5,10 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 /**
  * M0 阶段的轻量响应提取器。
@@ -51,4 +53,38 @@ object KugouResponse {
             }?.takeIf { it.startsWith("http") }
         }
     }.getOrNull()
+
+    /** `/v2/search/song` → 轻量曲目信息，供 M1 播放闭环使用。 */
+    fun searchTracks(rawJson: String): List<KugouTrack> = runCatching {
+        val root = Json.parseToJsonElement(rawJson).jsonObject
+        val lists = root["data"]?.jsonObject?.get("lists") as? JsonArray ?: JsonArray(emptyList())
+        lists.mapNotNull { element ->
+            val obj = element as? JsonObject ?: return@mapNotNull null
+            val hash = listOf("FileHash", "HQFileHash", "SQFileHash", "hash")
+                .firstNotNullOfOrNull { key ->
+                    obj[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.length >= 16 }
+                } ?: return@mapNotNull null
+            KugouTrack(
+                hash = hash.lowercase(),
+                name = cleanText(obj["SongName"]?.jsonPrimitive?.contentOrNull ?: "未知歌曲"),
+                artist = cleanText(obj["SingerName"]?.jsonPrimitive?.contentOrNull.orEmpty()),
+                album = cleanText(obj["AlbumName"]?.jsonPrimitive?.contentOrNull.orEmpty()),
+                durationMs = (obj["Duration"]?.jsonPrimitive?.longOrNull ?: 0L) * 1000L,
+                privilege = obj["Privilege"]?.jsonPrimitive?.intOrNull ?: 10,
+            )
+        }
+    }.getOrDefault(emptyList())
+
+    private fun cleanText(value: String): String =
+        value.replace(Regex("<[^>]*>"), "").trim()
 }
+
+/** 协议层轻量曲目 DTO；完整领域模型在 M2 的 `KugouRepository` 中定义。 */
+data class KugouTrack(
+    val hash: String,
+    val name: String,
+    val artist: String,
+    val album: String,
+    val durationMs: Long,
+    val privilege: Int,
+)

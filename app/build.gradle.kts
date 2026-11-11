@@ -6,6 +6,7 @@ val releaseKeystore: String? = System.getenv("RELEASE_KEYSTORE")
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -34,12 +35,16 @@ android {
 
     buildTypes {
         release {
-            // M0 骨架阶段不开混淆，避免干扰签名与产物排查。
+            // M1 阶段仍不开混淆，避免干扰签名与产物排查。
             isMinifyEnabled = false
             if (releaseKeystore != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     compileOptions {
@@ -56,4 +61,16 @@ kotlin {
 
 dependencies {
     implementation(project(":kugou"))
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons)
+    debugImplementation("androidx.compose.ui:ui-tooling")
+
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.kotlinx.coroutines.android)
 }
