@@ -94,6 +94,7 @@ C:\Users\Lucas.Lu\.workbuddy\secrets\
   （`/usr/local/lib/android/sdk`），显式 `yes | sdkmanager --licenses` 并按需安装 platform 35 / build-tools 35.0.0。
 - **空仓库不能直接建 blob**：Git Data API 对空仓库返回 409 `Git Repository is empty`，需先用 contents API 写入一个种子文件初始化默认分支。
 - `kugou` 的网络实现必须用 `HttpURLConnection`，不能用 `java.net.http.HttpClient` —— 后者在 Android 运行时不存在。
+- **引入 AndroidX / Compose / Media3 后必须在 `gradle.properties` 打开 `android.useAndroidX=true`**，否则 `:app:checkDebugAarMetadata` 直接报 "contains AndroidX dependencies, but the android.useAndroidX property is not enabled"。M1 首次编译即踩此坑。
 
 ## M0 骨架 APK 的定位
 
